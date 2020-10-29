@@ -537,7 +537,29 @@ class RedisUtil
         return Redis::lindex($key, $index);
     }
 
+    /**
+     * 将值value插入到列表key当中，位于值pivot之前
+     * @param string $key
+     * @param string $pivot
+     * @param string $value
+     * @return mixed 返回false则不是list类型,返回插入操作完成之后，list的长度。如果没有找到pivot，返回-1。如果key不存在或为空列表，返回0
+     */
+    public function lInsertBefore(string $key, string $pivot, string $value)
+    {
+        return Redis::linsert($key, "BEFORE", $pivot, $value);
+    }
 
+    /**
+     * 将值value插入到列表key当中，位于值pivot之后
+     * @param string $key
+     * @param string $pivot
+     * @param string $value
+     * @return mixed 返回false则不是list类型,返回插入操作完成之后，list的长度。如果没有找到pivot，返回-1。如果key不存在或为空列表，返回0
+     */
+    public function lInsertAfter(string $key, string $pivot, string $value)
+    {
+        return Redis::linsert($key, "AFTER", $pivot, $value);
+    }
 
 
 }
