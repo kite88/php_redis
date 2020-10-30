@@ -246,7 +246,6 @@ class RedisUtil
         return Redis::hsetnx($key, $field, $value) === 1 ? true : false;
     }
 
-
     /**
      * 同时将多个field-value(域-值)对设置到哈希表key中【使用方法：hMSet('key_name', ['name' => '志在卓越', 'from' => 'MaoMing']))】
      * 如果key不存在,则创建。域field不存在则创建field，field存在则会覆盖哈希表中已存在的域field （记住只是覆盖某个field不是整个key）
@@ -542,7 +541,7 @@ class RedisUtil
      * @param string $key
      * @param string $pivot
      * @param string $value
-     * @return mixed 返回false则不是list类型,返回插入操作完成之后，list的长度。如果没有找到pivot，返回-1。如果key不存在或为空列表，返回0
+     * @return mixed 返回插入操作完成之后，list的长度。如果没有找到pivot，返回-1。如果key不存在或为空列表，返回0，如果返回false则不是list类型
      */
     public function lInsertBefore(string $key, string $pivot, string $value)
     {
@@ -554,12 +553,191 @@ class RedisUtil
      * @param string $key
      * @param string $pivot
      * @param string $value
-     * @return mixed 返回false则不是list类型,返回插入操作完成之后，list的长度。如果没有找到pivot，返回-1。如果key不存在或为空列表，返回0
+     * @return mixed 返回插入操作完成之后，list的长度。如果没有找到pivot，返回-1。如果key不存在或为空列表，返回0，如果返回false则不是list类型
      */
     public function lInsertAfter(string $key, string $pivot, string $value)
     {
         return Redis::linsert($key, "AFTER", $pivot, $value);
     }
 
+    /**
+     * 将列表{$sourceKey}中的最后一个元素(尾元素)弹出，并插入到列表{$destinationKey}里作为头元素
+     * 如果{$sourceKey}和{$destinationKey}相同，则列表中的表尾元素被移动到表头，并返回该元素
+     * 假如{$sourceKey}列表有元素a, b, c , d {$destinationKey}列表有元素x, y, z,执行完之后{$sourceKey}就变成a, b, c，而{$destinationKey}就变成d, x, y, z
+     * @param string $sourceKey
+     * @param string $destinationKey
+     * @return mixed 返回{$sourceKey}弹出的元素，如果返回false，可能是{$sourceKey}与{$destinationKey}不是list类型或{$sourceKey}不存在
+     */
+    public function rPopLPush(string $sourceKey, string $destinationKey)
+    {
+        return Redis::rpoplpush($sourceKey, $destinationKey);
+    }
+
+    /**
+     * 是rpoplpush的阻塞版本
+     * @param string $sourceKey
+     * @param string $destinationKey
+     * @param int $timeout 等待时间（单位秒），也就是说当列表{$sourceKey}为空时,等待执行时间。0表示阻塞时间可以无限期延长
+     * @return mixed
+     */
+    public function bRPopLPush(string $sourceKey, string $destinationKey, int $timeout)
+    {
+        return Redis::brpoplpush($sourceKey, $destinationKey, $timeout);
+    }
+
+    /************** Set ***************/
+
+    /**
+     * 将一个或多个member元素加入到集合key当中，已经存在于集合的{$member}元素将被忽略
+     * @param string $key
+     * @param string ...$member
+     * @return int|bool 返回添加到集合中的新元素的数量，如果返回false说明key不是Set类型
+     */
+    public function sAdd(string $key, string ...$member)
+    {
+        return Redis::sadd($key, ...$member);
+    }
+
+    /**
+     * 移除集合key中的一个或多个member元素，不存在的member元素会被忽略
+     * @param string $key
+     * @param string ...$member
+     * @return int|bool 返回成功移除的数量，如果返回false说明key不是Set类型
+     */
+    public function sRem(string $key, string ...$member)
+    {
+        return Redis::srem($key, ...$member);
+    }
+
+    /**
+     * 返回集合key中的所有成员
+     * @param string $key
+     * @return array
+     */
+    public function sMembers(string $key): array
+    {
+        $res = Redis::smembers($key);
+        return !$res ? [] : $res;
+    }
+
+    /**
+     * 判断member元素是否是集合key的成员
+     * @param string $key
+     * @param string $member
+     * @return bool
+     */
+    public function sIsMember(string $key, string $member): bool
+    {
+        return Redis::sismember($key, $member);
+    }
+
+    /**
+     * 返回集合中元素的数量
+     * @param string $key
+     * @return int 没有该key护着key不是Set类型统一返回0
+     */
+    public function sCard(string $key): int
+    {
+        return (int)Redis::scard($key);
+    }
+
+    /**
+     * 将member元素从{$sourceKey}集合移动到{$destinationKey}集合
+     * @param string $sourceKey
+     * @param string $destinationKey
+     * @param string $member
+     * @return bool
+     */
+    public function sMove(string $sourceKey, string $destinationKey, string $member): bool
+    {
+        return Redis::smove($sourceKey, $destinationKey, $member);
+    }
+
+    /**
+     * 移除并返回集合中的一个随机元素
+     * @param string $key
+     * @return mixed
+     */
+    public function sPop(string $key)
+    {
+        #return Redis::spop($key);
+        return Redis::command('spop', (array)$key);
+    }
+
+    /**
+     * 返回集合中的一个或多个随机成员元素,返回元素的数量由{$count}决定
+     * @param string $key
+     * @param int $count 可为负数,当为负数的时候则返回个数是{$count}的绝对值，值可能会重复
+     * @return mixed
+     */
+    public function sRandMember(string $key, int $count)
+    {
+        return Redis::srandmember($key, $count);
+    }
+
+    /**
+     * 该集合是所有给定集合的交集
+     * @param string ...$key
+     * @return mixed
+     */
+    public function sInter(string ...$key)
+    {
+        return Redis::sinter($key);
+    }
+
+    /**
+     * 该集合是所有给定集合的交集，结果保存到{$destinationKey}集合
+     * @param string $destinationKey
+     * @param string ...$key
+     * @return int 返回结果集中的成员数量
+     */
+    public function sInterStore(string $destinationKey, string ...$key): int
+    {
+        return (int)Redis::sinterstore($destinationKey, ...$key);
+    }
+
+    /**
+     * 返回给定集合的并集
+     * @param string ...$key
+     * @return mixed
+     */
+    public function sUnion(string ...$key)
+    {
+        return Redis::sunion($key);
+    }
+
+    /**
+     * 返回给定集合的并集，结果保存到{$destinationKey}集合
+     * @param string $destinationKey
+     * @param mixed ...$key
+     * @return int 返回结果集中的成员数量
+     */
+    public function sUnionStore(string $destinationKey, string ...$key): int
+    {
+        return (int)Redis::sunionstore($destinationKey, ...$key);
+    }
+
+    /**
+     * 返回给定集合的差集
+     * @param string ...$key
+     * @return mixed
+     */
+    public function sDiff(string ...$key)
+    {
+        return Redis::sdiff($key);
+    }
+
+    /**
+     * 返回给定集合的差集,结果保存到{$destinationKey}集合
+     * @param string $destinationKey
+     * @param string ...$key
+     * @return int
+     */
+    public function sDiffStore(string $destinationKey, string ...$key): int
+    {
+        return (int)Redis::sdiffstore($destinationKey, ...$key);
+    }
+
+    /************** Sorted Set ***************/
 
 }
