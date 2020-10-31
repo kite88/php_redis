@@ -95,6 +95,18 @@ class RedisUtil
     }
 
     /**
+     * 用value参数覆写(Overwrite)给定key所储存的字符串值，从偏移量offset开始。
+     * @param string $key
+     * @param int $offset
+     * @param string $value
+     * @return mixed 返回被SETRANGE修改之后，字符串的长度,如果返回false说明key不是String类型
+     */
+    public function setRange(string $key, int $offset, string $value)
+    {
+        return Redis::setrange($key, $offset, $value);
+    }
+
+    /**
      * 同时保存多个 key-value
      * @param array $keyValue
      * @return bool
@@ -143,6 +155,19 @@ class RedisUtil
     public function mGet(string ...$key): array
     {
         return Redis::mget($key);
+    }
+
+    /**
+     * 返回key中字符串值的子字符串，字符串的截取范围由start和end两个偏移量决定(包括start和end在内)。
+     * 负数偏移量表示从字符串最后开始计数，-1表示最后一个字符，-2表示倒数第二个，以此类推
+     * @param string $key
+     * @param int $start
+     * @param int $end
+     * @return mixed
+     */
+    public function getRange(string $key, int $start, int $end)
+    {
+        return Redis::getrange($key, $start, $end);
     }
 
     /**
@@ -217,6 +242,29 @@ class RedisUtil
     public function decrBy(string $key, int $decrement)
     {
         return Redis::decrby($key, $decrement);
+    }
+
+    /**
+     * 对key所储存的字符串值，设置或清除指定偏移量上的位(bit)。
+     * @param string $key
+     * @param $offset
+     * @param $value
+     * @return mixed 指定偏移量原来储存的位（"0"或"1"）
+     */
+    public function setBit(string $key, int $offset, int $value)
+    {
+        return Redis::setbit($key, $offset, $value);
+    }
+
+    /**
+     * 对key所储存的字符串值，获取指定偏移量上的位(bit)。
+     * @param string $key
+     * @param $offset
+     * @return mixed 字符串值指定偏移量上的位(bit)。
+     */
+    public function getBit(string $key, int $offset)
+    {
+        return Redis::getbit($key, $offset);
     }
 
     /************** Hash ***************/
@@ -403,7 +451,6 @@ class RedisUtil
     {
         return Redis::rpush($key, ...$value);
     }
-
 
     /**
      * 将值value插入到列表key的表尾,当且仅当key存在并且是一个列表(当key不存在，则无效)
