@@ -731,7 +731,7 @@ class RedisUtil
      * 返回给定集合的差集,结果保存到{$destinationKey}集合
      * @param string $destinationKey
      * @param string ...$key
-     * @return int
+     * @return int 返回结果集中的成员数量
      */
     public function sDiffStore(string $destinationKey, string ...$key): int
     {
@@ -739,5 +739,228 @@ class RedisUtil
     }
 
     /************** Sorted Set ***************/
+
+    /**
+     * 将一个member元素及其score值加入到有序集key当中
+     * @param string $key
+     * @param float $score 排序索引
+     * @param string $member 元素
+     * @return int|bool 返回被成功添加的新成员的数量，不包括那些被更新的、已经存在的成员，当key存在但不是有序集类型时返回false
+     */
+    public function zAdd(string $key, float $score, string $member)
+    {
+        return Redis::zadd($key, $score, $member);
+    }
+
+    /**
+     * 添加多个元素 【使用方法：zAdds('key', 1, 'member1', 2, 'member2', 3, 'member3')】
+     * @param string $key
+     * @param mixed ...$scoreMember
+     * @return int 被成功添加的新成员的数量
+     */
+    public function zAdds(string $key, ...$scoreMember)
+    {
+        return Redis::zadd($key, ...$scoreMember);
+    }
+
+    /**
+     * 移除有序集key中的一个或多个成员，不存在的成员将被忽略
+     * @param string $key
+     * @param string ...$member
+     * @return int 返回成功移除个数
+     */
+    public function zRem(string $key, string ...$member): int
+    {
+        return (int)Redis::zrem($key, ...$member);
+    }
+
+    /**
+     * 返回有序集key的数量
+     * @param string $key
+     * @return int
+     */
+    public function zCard(string $key): int
+    {
+        return (int)Redis::zcard($key);
+    }
+
+    /**
+     * 返回score值在min和max之间的成员的数量
+     * score值在min和max之间(默认包括score值等于min或max)的成员
+     * @param string $key
+     * @param float $min
+     * @param float $max
+     * @return int
+     */
+    public function zCount(string $key, float $min, float $max): int
+    {
+        return (int)Redis::zcount($key, $min, $max);
+    }
+
+    /**
+     * 返回有序集key中，成员{$member}的score值
+     * @param string $key
+     * @param string $member
+     * @return mixed 如果member元素不是有序集key的成员，或key不存在，返回 null
+     */
+    public function zScore(string $key, string $member)
+    {
+        $result = Redis::zscore($key, $member);
+        return $result === false ? null : (float)$result;
+    }
+
+    /**
+     * 为有序集key的成员{$member}的score值加上增量{$increment}
+     * @param string $key
+     * @param string $member
+     * @param float $increment 如果是负数则是减量
+     * @return mixed 返回成员的新score值，如果返回false则是失败的
+     */
+    public function zIncrBy(string $key, string $member, float $increment)
+    {
+        return Redis::zincrby($key, $increment, $member);
+    }
+
+    /**
+     * 返回有序集key中，指定区间内的成员
+     * 其中成员的位置按score值递增(从小到大)来排序。
+     * @param string $key
+     * @param float $start 为负数则是倒数
+     * @param float $stop 为负数则是倒数
+     * @param bool $isWithScores 是否也一起返回 score 的值
+     * @return array 指定区间内，带有score值(可选)的有序集成员的列表。
+     */
+    public function zRange(string $key, float $start, float $stop, bool $isWithScores = false): array
+    {
+        $result = Redis::zrange($key, $start, $stop, $isWithScores);
+        return !$result ? [] : $result;
+    }
+
+    /**
+     * 返回有序集key中，指定区间内的成员。
+     * 其中成员的位置按score值递减(从大到小)来排列。
+     * @param string $key
+     * @param float $start
+     * @param float $stop
+     * @param bool $isWithScores
+     * @return mixed
+     */
+    public function zRevRange(string $key, float $start, float $stop, bool $isWithScores = false): array
+    {
+        $result = Redis::zrevrange($key, $start, $stop, $isWithScores);
+        return !$result ? [] : $result;
+    }
+
+    /**
+     * 返回有序集key中，所有score值介于min和max之间(包括等于min或max)的成员。
+     * 有序集成员按score值递增(从小到大)次序排列。
+     * {$offset}与{$count}参数类似sql语句的 SELECT LIMIT offset, count
+     * @param string $key
+     * @param float $min
+     * @param float $max
+     * @param bool $isWithScores
+     * @param int $offset
+     * @param int $count
+     * @return array
+     */
+    public function zRangeByScore(string $key, float $min, float $max, bool $isWithScores = false, int $offset = 0, int $count = -1): array
+    {
+        $result = Redis::zrangebyscore($key, $min, $max, ['withscores' => $isWithScores, 'limit' => ['offset' => $offset, 'count' => $count]]);
+        if (!$result) return [];
+        return $result;
+    }
+
+    /**
+     * 返回有序集key中，score值介于max和min之间(默认包括等于max或min)的所有的成员。
+     * 有序集成员按score值递减(从大到小)的次序排列。
+     * {$offset}与{$count}参数类似sql语句的 SELECT LIMIT offset, count
+     * @param string $key
+     * @param float $min
+     * @param float $max
+     * @param bool $isWithScores
+     * @param int $offset
+     * @param int $count
+     * @return array
+     */
+    public function zRevRangeByScore(string $key, float $min, float $max, bool $isWithScores = false, int $offset = 0, int $count = -1): array
+    {
+        $result = Redis::zrevrangebyscore($key, $max, $min, ['withscores' => $isWithScores, 'limit' => ['offset' => $offset, 'count' => $count]]);
+        if (!$result) return [];
+        return $result;
+    }
+
+    /**
+     * 返回有序集key中成员member的排名。其中有序集成员按score值递增(从小到大)顺序排列。
+     * @param string $key
+     * @param string $member
+     * @return int|null 如果member是有序集key的成员，返回member的排名。如果member不是有序集key的成员，返回null
+     */
+    public function zRank(string $key, string $member)
+    {
+        $result = Redis::zrank($key, $member);
+        if (false === $result) return null;
+        return (int)$result;
+    }
+
+    /**
+     * 返回有序集key中成员member的排名。其中有序集成员按score值递减(从大到小)排序。
+     * @param string $key
+     * @param string $member
+     * @return int|null 如果member是有序集key的成员，返回member的排名。如果member不是有序集key的成员，返回null
+     */
+    public function zRevRank(string $key, string $member)
+    {
+        $result = Redis::zrevrank($key, $member);
+        return $result === false ? null : (int)$result;
+    }
+
+    /**
+     * 移除有序集key中，指定排名(rank)区间内的所有成员。
+     * 区间分别以下标参数start和stop指出，包含start和stop在内。
+     * @param string $key
+     * @param float $start
+     * @param float $stop
+     * @return int 被移除成员的数量。
+     */
+    public function zRemRangeByRank(string $key, float $start, float $stop): int
+    {
+        return (int)Redis::zremrangebyrank($key, $start, $stop);
+    }
+
+    /**
+     * 移除有序集key中，所有score值介于min和max之间(包括等于min或max)的成员。
+     * @param string $key
+     * @param float $min
+     * @param float $max
+     * @return int 被移除成员的数量。
+     */
+    public function zRemRangeByScore(string $key, float $min, float $max): int
+    {
+        return (int)Redis::zremrangebyscore($key, $min, $max);
+    }
+
+    /**
+     * 计算给定的一个或多个有序集的交集【使用方法 zInterStore("destinationKey", ['z_set_1', 'z_set_2']】
+     * 保存到$destinationKey
+     * @param string $destinationKey
+     * @param array $key
+     * @return int 返回{$destinationKey}的结果集的数量
+     */
+    public function zInterStore(string $destinationKey, array $key): int
+    {
+        return (int)Redis::zinterstore($destinationKey, $key);
+    }
+
+    /**
+     * 计算给定的一个或多个有序集的并集【使用方法 zUnionStore("destinationKey", ['z_set_1', 'z_set_2']】
+     * 保存到$destinationKey
+     * @param string $destinationKey
+     * @param array $key
+     * @return int 返回{$destinationKey}的结果集的数量
+     */
+    public function zUnionStore(string $destinationKey, array $key): int
+    {
+        return (int)Redis::zunionstore($destinationKey, $key);
+    }
 
 }
