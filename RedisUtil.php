@@ -17,6 +17,120 @@ class RedisUtil
     /************** Key ***************/
 
     /**
+     * 查找符合给定模式的key
+     * @param string $pattern
+     * @return array
+     */
+    public function keys(string $pattern = "*"): array
+    {
+        return Redis::keys($pattern);
+    }
+
+    /**
+     * 从当前数据库中随机返回(不删除)一个key。
+     * @return array
+     */
+    public function randomKey(): array
+    {
+        $arr = Redis::randomkey();
+        return $arr === false ? [] : $arr;
+    }
+
+    /**
+     * 返回给定key的剩余生存时间(以秒为单位)。
+     * 当key不存在或没有设置生存时间时，返回-1 。
+     * @param string $key
+     * @return int
+     */
+    public function ttl(string $key): int
+    {
+        return (int)Redis::ttl($key);
+    }
+
+    /**
+     * 将当前数据库(默认为0)的key移动到给定的数据库db当中。
+     * @param string $key
+     * @param string $db
+     * @param int $useDb 声明使用什么数据库
+     * @return bool
+     */
+    public function move(string $key, string $db, int $useDb = 0): bool
+    {
+        if ($useDb > 0) {
+            Redis::select($useDb);
+        }
+        return Redis::move($key, $db);
+    }
+
+    /**
+     * 重命名key 当newkey已经存在时，RENAME命令将覆盖旧值。
+     * @param string $key
+     * @param string $newKey
+     * @return bool
+     */
+    public function reName(string $key, string $newKey): bool
+    {
+        return Redis::rename($key, $newKey);
+    }
+
+    /**
+     * 重命名key，只能当newkey不存在时，才将key改为newkey。
+     * @param string $key
+     * @param string $newKey
+     * @return bool
+     */
+    public function reNameNx(string $key, string $newKey): bool
+    {
+        return Redis::renamenx($key, $newKey);
+    }
+
+    /**
+     * 给key设置过期时间
+     * @param string $key
+     * @param int $seconds 单位（秒）
+     * @return bool
+     */
+    public function expire(string $key, int $seconds): bool
+    {
+        return Redis::expire($key, $seconds);
+    }
+
+    /**
+     * 给key设置过期时间
+     * @param string $key
+     * @param int $timestamp UNIX时间戳
+     * @return bool
+     */
+    public function expireAt(string $key, int $timestamp): bool
+    {
+        return Redis::expireat($key, $timestamp);
+    }
+
+    /**
+     * 从内部察看给定key的Redis对象。使用方法【object("REFCOUNT", 'str_01')】
+     * OBJECT REFCOUNT <key>返回给定key引用所储存的值的次数。此命令主要用于除错。
+     * OBJECT ENCODING <key>返回给定key锁储存的值所使用的内部表示(representation)。
+     * OBJECT IDLETIME <key>返回给定key自储存以来的空转时间(idle， 没有被读取也没有被写入)，以秒为单位。
+     * @param string $subCommand
+     * @param string $arguments
+     * @return mixed
+     */
+    public function object(string $subCommand, string $arguments)
+    {
+        return Redis::object($subCommand, $arguments);
+    }
+
+    /**
+     * 当生存时间移除成功时
+     * @param string $key
+     * @return bool
+     */
+    public function persist(string $key): bool
+    {
+        return Redis::persist($key);
+    }
+
+    /**
      * 判断是否存在
      * @param string $key
      * @return mixed
@@ -57,6 +171,25 @@ class RedisUtil
         }
     }
 
+    /**
+     * 排序 ，返回键值从小到大排序的结果
+     * @param string $key
+     * @return mixed
+     */
+    public function sortAsc(string $key)
+    {
+        return Redis::sort($key);
+    }
+
+    /**
+     * 排序 ，返回键值从大到小排序的结果
+     * @param string $key
+     * @return mixed
+     */
+    public function sortDesc(string $key)
+    {
+        return Redis::sort($key, ['by' => 'desc']);
+    }
 
     /************** String ***************/
 
